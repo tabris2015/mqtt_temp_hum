@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
+#include <PubSubClient.h> // cliente mqtt
 #include <DHT.h>
-#include "param.h"
+#include "param.h"      // parametros de conexion de los pines de sensores y actuadores
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -14,6 +14,9 @@ float temp = 0.0;
 float hum = 0.0;
 float diff = 1.0;
 
+int lastPir = 0;
+
+
 // prototypes
 
 void init_wifi();
@@ -23,21 +26,23 @@ void callback(char* topic, byte* payload, unsigned int length);
 //
 
 void setup() {
+  Serial.begin(9600);
   // put your setup code here, to run once:
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(STATUS_LED_PIN, OUTPUT);
+  pinMode(ERROR_LED_PIN, OUTPUT);
   pinMode(OUT_PIN, OUTPUT);
   pinMode(PIR_PIN, INPUT);
 
 
   digitalWrite(LED_BUILTIN, 1);
-  digitalWrite(STATUS_LED_PIN, 1);
+  digitalWrite(STATUS_LED_PIN, 0);
+  digitalWrite(ERROR_LED_PIN, 1);
   digitalWrite(OUT_PIN, 0);
 
-  Serial.begin(9600);
   delay(10);
   Serial.println('\n');
-
+  dht.begin();
   init_wifi();
   
 }
@@ -52,6 +57,16 @@ void loop() {
   float newTemp = dht.readTemperature();
   float newHum = dht.readHumidity();
 
+  int newPir = digitalRead(PIR_PIN);
+
+  Serial.print("temp: ");
+  Serial.println(newTemp);
+  Serial.print("hum: ");
+  Serial.println(newHum);
+  Serial.print("pir: ");
+  Serial.println(newPir);
+  
+
   if (checkBound(newTemp, temp, diff))
   {
     temp = newTemp;
@@ -65,7 +80,17 @@ void loop() {
     Serial.println(String(hum).c_str());
     client.publish(HUM_TOPIC, String(hum).c_str(), true);
   }
-  delay(1000);
+  if (lastPir != newPir)
+  {
+    if(newPir == 1)
+    {
+      Serial.println("New movement!");
+      client.publish(PIR_TOPIC, "movimiento!", true);
+    }
+  }
+  lastPir = newPir;
+
+  delay(2000);
   
 }
 
@@ -91,14 +116,14 @@ void init_wifi()
 
   client.setServer(MQTT_SERVER, 1883);
   client.setCallback(callback);
-  client.subscribe(LED_TOPIC);
+  client.subscribe(OUT_TOPIC);
 }
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    digitalWrite(STATUS_LED_PIN, 1);
-
+    digitalWrite(ERROR_LED_PIN, 1);
+    digitalWrite(STATUS_LED_PIN, 0);
     dht.begin();
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
@@ -106,8 +131,10 @@ void reconnect() {
     // if (client.connect("ESP8266Client")) {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
-      client.subscribe(LED_TOPIC);
-      digitalWrite(STATUS_LED_PIN, 0);
+      client.subscribe(OUT_TOPIC);
+      digitalWrite(ERROR_LED_PIN, 0);
+      digitalWrite(STATUS_LED_PIN, 1);
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());

@@ -5,18 +5,22 @@
 #define dht_dpin 0
 
 #define PIR_PIN 4
-#define STATUS_LED_PIN 5
-#define OUT_PIN 6
+#define STATUS_LED_PIN 14   // d5
+#define ERROR_LED_PIN 12    // d6
+#define OUT_PIN 5
 
-#define SSID "LARUTA1"
-#define PASS "73733340jle"
+#define SSID "ROSnet"
+#define PASS "ROSNET2018"
 
-#define MQTT_SERVER "192.168.1.11"
-#define MQTT_USER "pepe"
-#define MQTT_PASS "grillogay123"
+// datos del servidor raspi
+
+#define MQTT_SERVER "192.168.0.105"
+#define MQTT_USER ""
+#define MQTT_PASS ""
 
 #define TEMP_TOPIC "sensor/temp"
 #define HUM_TOPIC "sensor/hum"
-#define LED_TOPIC "control/led"
+#define PIR_TOPIC "sensor/mov"
+#define OUT_TOPIC "control/ventilador"
 
 #endif // !PARAM_H
